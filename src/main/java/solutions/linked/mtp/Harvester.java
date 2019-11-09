@@ -28,7 +28,6 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
-import java.util.logging.Logger;
 import org.apache.clerezza.commons.rdf.Graph;
 import org.apache.clerezza.commons.rdf.IRI;
 import org.apache.clerezza.rdf.core.serializedform.Parser;
@@ -60,7 +59,7 @@ public class Harvester {
 
     public Harvester(Arguments arguments) throws IOException {
         this.arguments = arguments;
-        storageDir = Path.of("storage");
+        storageDir = Path.of(arguments.output());
         Files.createDirectories(storageDir);
     }
 
@@ -72,7 +71,7 @@ public class Harvester {
     }
 
     public void start() throws Exception {
-        Graph index = loadGraph(arguments.index());
+        Graph index = loadGraph(arguments.index(), arguments.base());
         save(index, "index");
         GraphNode node = new GraphNode(OWL.Ontology, index);
         Iterator<GraphNode> ontologyIter = node.getSubjectNodes(RDF.type);
@@ -88,8 +87,11 @@ public class Harvester {
         }
 
     }
-
     private Graph loadGraph(String uri) throws IOException {
+        return loadGraph(uri, uri);
+    }
+    
+    private Graph loadGraph(String uri, String base) throws IOException {
         if (arguments.verbose()) {
             System.out.println("Loading "+uri);
         }
@@ -103,16 +105,20 @@ public class Harvester {
         hcb.setSSLContext(sslContext);*/
         try (CloseableHttpClient httpClient = hcb.build()) {
             HttpGet httpGet = new HttpGet(uri);
-            httpGet.setHeader("Accept", "text/turtle, application/rdf+xml, application/ld+json, */*");
+            httpGet.setHeader("Accept", "text/turtle, application/rdf+xml, application/ld+json, application/n-triples, */*");
             final int timeout = 60 * 000;
-            httpGet.setConfig(RequestConfig.custom().setSocketTimeout(timeout).setConnectionRequestTimeout(timeout).build());
+            httpGet.setConfig(RequestConfig.custom()
+                    .setSocketTimeout(timeout)
+                    .setConnectTimeout(timeout)
+                    .setConnectionRequestTimeout(timeout)
+                    .build());
             try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
                 HttpEntity entity = response.getEntity();
                 final Header contentTypeHeader = entity.getContentType();
                 String contentType = contentTypeHeader != null ? 
                         normalizeMediaType(contentTypeHeader.getValue()) :
                         "application/rdf+xml";
-                return parser.parse(entity.getContent(), contentType, new IRI(uri));
+                return parser.parse(entity.getContent(), contentType, new IRI(base));
             }
         }
     }

@@ -45,8 +45,26 @@ public interface Arguments {
         shortName = "I",
         required = false,
         defaultValue = "http://prefix.cc/popular/all.file.vann",
-        description = "Point to the index graph describing the prefixes using the vann vocabulary."
+        description = "Defines the index graph describing the prefixes using the vann vocabulary."
     )
     public String index();
+    
+    @CommandLine (
+        longName ="base",
+        shortName = "B",
+        required = false,
+        defaultValue = "https://mtp.linked.solutions/",
+        description = "The base URI used wehn parsing the index."
+    )
+    public String base();
+    
+    @CommandLine (
+        longName ="output",
+        shortName = "O",
+        required = false,
+        defaultValue = "storage",
+        description = "Path to the directory where the harvest shall be stored."
+    )
+    public String output();
 
 }
